@@ -517,7 +517,7 @@ function calcStatus(p) {
   const hoje = new Date(); hoje.setHours(0,0,0,0);
   const data = new Date(p.vencimento + 'T00:00:00');
   const diff = Math.round((data - hoje) / 86400000);
-  if (diff < 0) return 'vencido';
+  if (diff <= 0) return 'vencido';
   if (diff <= 7) return 'avencer';
   return 'pago';
 }
