@@ -429,6 +429,19 @@ header {
     <div id="d-historico"><div style="color:var(--text2);font-size:12px;">Carregando...</div></div>
 
     <div class="divider"></div>
+    <div id="secao-whatsapp">
+      <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">ENVIAR COBRANÇA</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <div class="fg" style="flex:1;margin-bottom:0;">
+          <input type="tel" id="wp-numero" placeholder="Ex: 5511999999999" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:'Exo 2',sans-serif;outline:none;">
+        </div>
+        <button onclick="enviarWhatsApp()" style="flex-shrink:0;padding:10px 14px;background:#25D366;border:none;border-radius:8px;color:#fff;font-size:18px;cursor:pointer;">
+          📲
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);">Digite o número com DDI (55) e DDD. Ex: 5511999999999</div>
+    </div>
+    <div class="divider"></div>
     <button class="btn-secondary" onclick="abrirEdicao()">✏️ Editar dados do player</button>
   </div>
 </div>
@@ -943,6 +956,57 @@ async function resetarRenovacoes() {
   } catch(e) {
     toast('Erro ao resetar','err');
   }
+}
+
+// ============================================================
+// WHATSAPP
+// ============================================================
+function enviarWhatsApp() {
+  const p = playerAtual;
+  const numero = document.getElementById('wp-numero').value.trim().replace(/\D/g, '');
+
+  if (!numero || numero.length < 10) {
+    toast('Digite um número válido com DDI e DDD', 'err');
+    return;
+  }
+
+  const st = calcStatus(p);
+  const dias = diasRestantes(p);
+  const LIVEPIX = 'https://livepix.gg/twddayz';
+
+  let msg = '';
+
+  if (st === 'vencido') {
+    msg = `Olá *${p.psn}*! 👋
+
+Seu *${p.modulo}* no servidor *[BR] TWD - DAYZ - PVE* venceu há *${Math.abs(dias)} dia(s)*.
+
+💳 Renove agora para não perder o acesso:
+${LIVEPIX}
+
+Após o pagamento envie o comprovante aqui. ✅`;
+  } else if (st === 'avencer') {
+    msg = `Olá *${p.psn}*! 👋
+
+Seu *${p.modulo}* no servidor *[BR] TWD - DAYZ - PVE* vence em *${dias} dia(s)*.
+
+💳 Renove com antecedência:
+${LIVEPIX}
+
+Após o pagamento envie o comprovante aqui. ✅`;
+  } else {
+    msg = `Olá *${p.psn}*! 👋
+
+Passando para lembrar que seu *${p.modulo}* no servidor *[BR] TWD - DAYZ - PVE* vence em *${fmtData(p.vencimento)}*.
+
+💳 Renove quando quiser:
+${LIVEPIX}
+
+Após o pagamento envie o comprovante aqui. ✅`;
+  }
+
+  const url = `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
 }
 
 // ============================================================
