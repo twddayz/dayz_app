@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DayZ Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080b12;
+  --bg2: #0d1320;
+  --bg3: #121929;
+  --bg4: #1a2438;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text: #c8d4e8;
+  --text2: #6b7fa3;
+  --accent: #e85d04;
+  --accent2: #ff7c2a;
+  --green: #00d084;
+  --green-bg: rgba(0,208,132,0.08);
+  --yellow: #ffc107;
+  --yellow-bg: rgba(255,193,7,0.08);
+  --red: #ff3d57;
+  --red-bg: rgba(255,61,87,0.08);
+  --blue: #4da6ff;
+  --blue-bg: rgba(77,166,255,0.08);
+  --glow: 0 0 20px rgba(232,93,4,0.15);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Exo 2',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+/* SCAN LINE EFFECT */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background:repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events:none;
+  z-index:1000;
+}
+
+/* ======================== LOGIN ======================== */
+#login-screen {
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(232,93,4,0.12) 0%, transparent 60%), var(--bg);
+  padding:20px;
+}
+.login-box {
+  width:100%;
+  max-width:380px;
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  padding:40px 32px;
+  box-shadow: 0 0 60px rgba(232,93,4,0.1), 0 24px 48px rgba(0,0,0,0.4);
+}
+.login-logo {
+  font-family:'Orbitron',monospace;
+  font-size:28px;
+  font-weight:900;
+  text-align:center;
+  margin-bottom:6px;
+  letter-spacing:4px;
+}
+.login-logo span { color:var(--accent); }
+.login-sub { text-align:center; font-size:11px; color:var(--text2); letter-spacing:3px; text-transform:uppercase; margin-bottom:36px; }
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:11px; font-weight:600; color:var(--text2); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+.form-group input {
+  width:100%;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:12px 14px;
+  color:var(--text);
+  font-size:14px;
+  font-family:'Exo 2',sans-serif;
+  outline:none;
+  transition:border-color 0.2s;
+}
+.form-group input:focus { border-color:var(--accent); }
+.btn-login {
+  width:100%;
+  padding:14px;
+  background:var(--accent);
+  border:none;
+  border-radius:8px;
+  color:#fff;
+  font-family:'Orbitron',monospace;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:2px;
+  cursor:pointer;
+  margin-top:8px;
+  transition:all 0.2s;
+}
+.btn-login:hover { background:var(--accent2); box-shadow:var(--glow); }
+.login-error { color:var(--red); font-size:12px; text-align:center; margin-top:12px; min-height:18px; }
+
+/* ======================== APP ======================== */
+#app { display:none; }
+
+/* HEADER */
+header {
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:0 20px;
+  height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;
+  top:0;
+  z-index:100;
+}
+.header-logo { font-family:'Orbitron',monospace; font-size:16px; font-weight:900; letter-spacing:3px; }
+.header-logo span { color:var(--accent); }
+.header-right { display:flex; align-items:center; gap:12px; }
+.btn-logout { background:transparent; border:1px solid var(--border2); border-radius:6px; padding:6px 12px; color:var(--text2); font-size:11px; cursor:pointer; font-family:'Exo 2',sans-serif; transition:all 0.2s; }
+.btn-logout:hover { border-color:var(--red); color:var(--red); }
+.header-date { font-size:11px; color:var(--text2); }
+
+/* STATS */
+.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:16px 16px 0; }
+.stat { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:14px; text-align:center; position:relative; overflow:hidden; }
+.stat::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg, currentColor 0%, transparent 60%); opacity:0.03; }
+.stat-num { font-family:'Orbitron',monospace; font-size:32px; font-weight:900; line-height:1; }
+.stat-label { font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; margin-top:4px; opacity:0.6; }
+.stat.red { color:var(--red); border-color:rgba(255,61,87,0.2); }
+.stat.yellow { color:var(--yellow); border-color:rgba(255,193,7,0.2); }
+.stat.green { color:var(--green); border-color:rgba(0,208,132,0.2); }
+
+/* TABS */
+.tabs { display:flex; gap:4px; padding:14px 16px 0; overflow-x:auto; scrollbar-width:none; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab { flex-shrink:0; padding:7px 14px; border-radius:6px; font-size:11px; font-weight:600; letter-spacing:1px; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text2); transition:all 0.2s; font-family:'Exo 2',sans-serif; text-transform:uppercase; }
+.tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* TOOLBAR */
+.toolbar { display:flex; gap:8px; padding:12px 16px 0; align-items:center; flex-wrap:wrap; }
+.search-box { flex:1; min-width:160px; background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; font-family:'Exo 2',sans-serif; outline:none; }
+.search-box::placeholder { color:var(--text2); }
+.search-box:focus { border-color:var(--accent); }
+.btn-add { flex-shrink:0; padding:9px 16px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-family:'Orbitron',monospace; font-size:11px; font-weight:700; letter-spacing:1px; cursor:pointer; transition:all 0.2s; }
+.btn-add:hover { background:var(--accent2); }
+
+/* FILTROS */
+.filtros { display:flex; gap:6px; padding:10px 16px 0; overflow-x:auto; scrollbar-width:none; }
+.filtro { flex-shrink:0; padding:5px 12px; border-radius:999px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text2); transition:all 0.2s; font-family:'Exo 2',sans-serif; }
+.filtro.ativo { background:var(--bg4); color:var(--text); border-color:var(--border2); }
+
+/* LISTA */
+.lista { padding:10px 16px 80px; display:flex; flex-direction:column; gap:6px; }
+.section-title { font-size:10px; font-weight:600; color:var(--text2); letter-spacing:2px; text-transform:uppercase; padding:12px 0 4px; }
+
+.card {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  cursor:pointer;
+  transition:all 0.2s;
+  animation:fadeIn 0.25s ease;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+.card:hover { border-color:var(--border2); background:var(--bg3); }
+.card.vencido { border-color:rgba(255,61,87,0.25); background:linear-gradient(135deg,var(--red-bg),var(--bg2)); }
+.card.avencer { border-color:rgba(255,193,7,0.25); background:linear-gradient(135deg,var(--yellow-bg),var(--bg2)); }
+.card.pago { border-color:rgba(0,208,132,0.15); }
+.card.vitalicio { border-color:rgba(77,166,255,0.2); }
+
+.card-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.card.vencido .card-icon { background:var(--red-bg); }
+.card.avencer .card-icon { background:var(--yellow-bg); }
+.card.pago .card-icon { background:var(--green-bg); }
+.card.vitalicio .card-icon { background:var(--blue-bg); }
+
+.card-info { flex:1; min-width:0; }
+.card-psn { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:0.5px; }
+.card-meta { font-size:11px; color:var(--text2); margin-top:2px; }
+
+.badge { flex-shrink:0; padding:3px 8px; border-radius:4px; font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; font-family:'Orbitron',monospace; }
+.badge.vencido { background:var(--red-bg); color:var(--red); border:1px solid rgba(255,61,87,0.3); }
+.badge.avencer { background:var(--yellow-bg); color:var(--yellow); border:1px solid rgba(255,193,7,0.3); }
+.badge.pago { background:var(--green-bg); color:var(--green); border:1px solid rgba(0,208,132,0.3); }
+.badge.vitalicio { background:var(--blue-bg); color:var(--blue); border:1px solid rgba(77,166,255,0.3); }
+
+.empty { text-align:center; padding:48px 20px; color:var(--text2); }
+.empty-icon { font-size:36px; margin-bottom:10px; opacity:0.4; }
+
+/* LOADING */
+.loading-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px; gap:12px; color:var(--text2); font-size:13px; }
+.loader { width:32px; height:32px; border:2px solid var(--border2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* ======================== MODAL ======================== */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:500; align-items:flex-end; justify-content:center; backdrop-filter:blur(4px); }
+.overlay.open { display:flex; }
+.modal {
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:16px 16px 0 0;
+  padding:24px 20px 40px;
+  width:100%;
+  max-width:480px;
+  max-height:90vh;
+  overflow-y:auto;
+  animation:slideUp 0.25s ease;
+}
+@keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+.modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.modal-title { font-family:'Orbitron',monospace; font-size:15px; font-weight:700; letter-spacing:2px; }
+.btn-close { background:transparent; border:1px solid var(--border2); border-radius:6px; padding:4px 8px; color:var(--text2); cursor:pointer; font-size:16px; line-height:1; }
+
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.fg { margin-bottom:14px; }
+.fg label { display:block; font-size:10px; font-weight:600; color:var(--text2); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; }
+.fg input, .fg select, .fg textarea {
+  width:100%;
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:10px 12px;
+  color:var(--text);
+  font-size:13px;
+  font-family:'Exo 2',sans-serif;
+  outline:none;
+  transition:border-color 0.2s;
+}
+.fg input:focus, .fg select:focus, .fg textarea:focus { border-color:var(--accent); }
+.fg select option { background:var(--bg2); }
+.fg textarea { resize:vertical; min-height:70px; }
+.toggle-row { display:flex; align-items:center; justify-content:space-between; background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:10px 12px; margin-bottom:14px; }
+.toggle-label { font-size:13px; color:var(--text); }
+.toggle { width:40px; height:22px; background:var(--bg4); border-radius:11px; border:none; cursor:pointer; position:relative; transition:background 0.2s; }
+.toggle.on { background:var(--accent); }
+.toggle::after { content:''; position:absolute; top:3px; left:3px; width:16px; height:16px; background:#fff; border-radius:50%; transition:left 0.2s; }
+.toggle.on::after { left:21px; }
+
+.btn-primary { width:100%; padding:12px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-family:'Orbitron',monospace; font-size:12px; font-weight:700; letter-spacing:2px; cursor:pointer; transition:all 0.2s; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-secondary { width:100%; padding:10px; background:transparent; border:1px solid var(--border2); border-radius:8px; color:var(--text2); font-size:13px; cursor:pointer; margin-top:8px; font-family:'Exo 2',sans-serif; transition:all 0.2s; }
+.btn-danger { width:100%; padding:10px; background:transparent; border:1px solid rgba(255,61,87,0.3); border-radius:8px; color:var(--red); font-size:13px; cursor:pointer; margin-top:8px; font-family:'Exo 2',sans-serif; transition:all 0.2s; }
+.btn-danger:hover { background:var(--red-bg); }
+
+/* HISTÓRICO */
+.hist-item { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+.hist-valor { font-family:'Orbitron',monospace; font-size:15px; font-weight:700; color:var(--green); }
+.hist-meta { font-size:11px; color:var(--text2); margin-top:2px; }
+.hist-obs { font-size:12px; color:var(--text); margin-top:2px; }
+.divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
+
+/* TOAST */
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--bg3); border:1px solid var(--border2); border-radius:10px; padding:12px 20px; font-size:13px; z-index:999; transition:transform 0.3s; white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.ok { border-color:rgba(0,208,132,0.4); color:var(--green); }
+.toast.err { border-color:rgba(255,61,87,0.4); color:var(--red); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">DAY<span>Z</span></div>
+    <div class="login-sub">Server Manager</div>
+    <div class="fg">
+      <label>Email</label>
+      <input type="email" id="l-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="fg">
+      <label>Senha</label>
+      <input type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" onclick="login()">ENTRAR</button>
+    <div class="login-error" id="login-erro"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="header-logo">DAY<span>Z</span></div>
+    <div class="header-right">
+      <div class="header-date" id="hdata"></div>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat red"><div class="stat-num" id="s-vencido">—</div><div class="stat-label">Vencidos</div></div>
+    <div class="stat yellow"><div class="stat-num" id="s-avencer">—</div><div class="stat-label">A Vencer</div></div>
+    <div class="stat green"><div class="stat-num" id="s-pago">—</div><div class="stat-label">Em Dia</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="mudarAba('todos',this)">Todos</button>
+    <button class="tab" onclick="mudarAba('Plano VIP',this)">VIP</button>
+    <button class="tab" onclick="mudarAba('Armário de Armas',this)">Armário</button>
+    <button class="tab" onclick="mudarAba('Bases e Mods',this)">Bases</button>
+    <button class="tab" onclick="mudarAba('Seguro de Veículos',this)">Seguro</button>
+  </div>
+
+  <div class="toolbar">
+    <input class="search-box" placeholder="Buscar player..." oninput="buscar(this.value)">
+    <button class="btn-add" onclick="abrirModalNovo()">+ PLAYER</button>
+  </div>
+
+  <div class="filtros">
+    <button class="filtro ativo" onclick="mudarFiltro('todos',this)">Todos</button>
+    <button class="filtro" onclick="mudarFiltro('vencido',this)">🔴 Vencidos</button>
+    <button class="filtro" onclick="mudarFiltro('avencer',this)">🟡 A Vencer</button>
+    <button class="filtro" onclick="mudarFiltro('pago',this)">🟢 Em Dia</button>
+  </div>
+
+  <div class="lista" id="lista"></div>
+</div>
+
+<!-- MODAL PLAYER -->
+<div class="overlay" id="modal-player">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-titulo">NOVO PLAYER</div>
+      <button class="btn-close" onclick="fecharModal('modal-player')">✕</button>
+    </div>
+
+    <input type="hidden" id="p-id">
+
+    <div class="fg">
+      <label>PSN do Jogador</label>
+      <input type="text" id="p-psn" placeholder="Ex: Edipo536">
+    </div>
+    <div class="fg">
+      <label>Módulo</label>
+      <select id="p-modulo">
+        <option>Plano VIP</option>
+        <option>Armário de Armas</option>
+        <option>Bases e Mods</option>
+        <option>Seguro de Veículos</option>
+      </select>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Plano Vitalício</span>
+      <button class="toggle" id="toggle-vital" onclick="toggleVital()"></button>
+    </div>
+
+    <div id="campo-vcto" class="fg">
+      <label>Data de Vencimento</label>
+      <input type="date" id="p-vcto">
+    </div>
+
+    <div class="fg">
+      <label>Discord ID (opcional)</label>
+      <input type="text" id="p-discord" placeholder="Ex: 123456789012345678">
+    </div>
+    <div class="fg">
+      <label>Username Discord (opcional)</label>
+      <input type="text" id="p-discord-user" placeholder="Ex: nomedoplayer">
+    </div>
+
+    <button class="btn-primary" onclick="salvarPlayer()">SALVAR</button>
+    <button class="btn-secondary" onclick="fecharModal('modal-player')">Cancelar</button>
+    <button class="btn-danger" id="btn-excluir" style="display:none" onclick="excluirPlayer()">Excluir Player</button>
+  </div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div class="overlay" id="modal-detalhe">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="d-psn">PLAYER</div>
+      <button class="btn-close" onclick="fecharModal('modal-detalhe')">✕</button>
+    </div>
+
+    <div id="d-info" style="margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.8;"></div>
+
+    <div class="divider"></div>
+    <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">REGISTRAR PAGAMENTO</div>
+
+    <div class="form-row">
+      <div class="fg">
+        <label>Valor (R$)</label>
+        <input type="number" id="pg-valor" placeholder="0.00" step="0.01">
+      </div>
+      <div class="fg">
+        <label>Nova data vcto</label>
+        <input type="date" id="pg-nova-vcto">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Observação</label>
+      <textarea id="pg-obs" placeholder="Pix, renovação 30 dias..."></textarea>
+    </div>
+    <button class="btn-primary" onclick="registrarPagamento()">REGISTRAR PAGAMENTO</button>
+
+    <div class="divider"></div>
+    <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">HISTÓRICO</div>
+    <div id="d-historico"><div style="color:var(--text2);font-size:12px;">Carregando...</div></div>
+
+    <div class="divider"></div>
+    <button class="btn-secondary" onclick="abrirEdicao()">✏️ Editar dados do player</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const SUPABASE_URL = 'https://zzaghsrauwhmjaesodlf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_SloM1j_AUDkeUtLJttetKw_BTdid107';
+const DISCORD_TOKEN = 'MTUwMTk0MTg5MTU2OTAyOTI5MA.G4ab_A.B7RfP0P9t4RjJ1H88pLVqCt3L93aSh497L7iio';
+
+// Login simples (email/senha hardcoded — troque aqui)
+const ADMIN_EMAIL = 'admin@dayz.com';
+const ADMIN_SENHA = 'dayz2026';
+
+// ============================================================
+// SUPABASE API
+// ============================================================
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(SUPABASE_URL + path, {
+    ...opts,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+      ...(opts.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+// ============================================================
+// LOGIN
+// ============================================================
+function login() {
+  const email = document.getElementById('l-email').value.trim();
+  const senha = document.getElementById('l-senha').value;
+  const erro = document.getElementById('login-erro');
+
+  if (email === ADMIN_EMAIL && senha === ADMIN_SENHA) {
+    sessionStorage.setItem('logado', '1');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    init();
+  } else {
+    erro.textContent = 'Email ou senha incorretos.';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('logado');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-erro').textContent = '';
+}
+
+document.getElementById('l-senha').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+// ============================================================
+// ESTADO
+// ============================================================
+let players = [];
+let abaAtiva = 'todos';
+let filtroAtivo = 'todos';
+let buscaAtiva = '';
+let playerAtual = null;
+
+// ============================================================
+// STATUS
+// ============================================================
+function calcStatus(p) {
+  if (p.vitalicio) return 'vitalicio';
+  if (!p.vencimento) return 'vitalicio';
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const data = new Date(p.vencimento + 'T00:00:00');
+  const diff = Math.round((data - hoje) / 86400000);
+  if (diff < 0) return 'vencido';
+  if (diff <= 7) return 'avencer';
+  return 'pago';
+}
+
+function diasRestantes(p) {
+  if (p.vitalicio || !p.vencimento) return null;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const data = new Date(p.vencimento + 'T00:00:00');
+  return Math.round((data - hoje) / 86400000);
+}
+
+function fmtData(d) {
+  if (!d) return '—';
+  const [y,m,dd] = d.split('-');
+  return `${dd}/${m}/${y}`;
+}
+
+// ============================================================
+// CARREGAR PLAYERS
+// ============================================================
+async function carregarPlayers() {
+  document.getElementById('lista').innerHTML = '<div class="loading-screen"><div class="loader"></div><div>Carregando...</div></div>';
+  try {
+    players = await sbFetch('/rest/v1/players?ativo=eq.true&order=psn.asc');
+    render();
+  } catch(e) {
+    document.getElementById('lista').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>Erro ao carregar. Verifique o SQL do Supabase.</div>';
+    console.error(e);
+  }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+const icones = { 'Plano VIP':'⭐', 'Armário de Armas':'🔫', 'Bases e Mods':'🏠', 'Seguro de Veículos':'🚗' };
+const badgeLabel = { vencido:'VENCIDO', avencer:'A VENCER', pago:'PAGO', vitalicio:'VITA' };
+const ordem = { vencido:0, avencer:1, pago:2, vitalicio:3 };
+
+function render() {
+  const lista = document.getElementById('lista');
+  lista.innerHTML = '';
+
+  let filtrados = players.filter(p => {
+    const st = calcStatus(p);
+    const abaOk = abaAtiva === 'todos' || p.modulo === abaAtiva;
+    const filtroOk = filtroAtivo === 'todos' || st === filtroAtivo;
+    const buscaOk = !buscaAtiva || p.psn.toLowerCase().includes(buscaAtiva.toLowerCase());
+    return abaOk && filtroOk && buscaOk;
+  });
+
+  filtrados.sort((a,b) => ordem[calcStatus(a)] - ordem[calcStatus(b)] || a.psn.localeCompare(b.psn));
+
+  // Stats
+  let totV=0, totA=0, totP=0;
+  players.forEach(p => {
+    const s = calcStatus(p);
+    if (s==='vencido') totV++;
+    else if (s==='avencer') totA++;
+    else if (s==='pago') totP++;
+  });
+  document.getElementById('s-vencido').textContent = totV;
+  document.getElementById('s-avencer').textContent = totA;
+  document.getElementById('s-pago').textContent = totP;
+
+  if (filtrados.length === 0) {
+    lista.innerHTML = '<div class="empty"><div class="empty-icon">🎮</div>Nenhum player encontrado</div>';
+    return;
+  }
+
+  let ultimoSt = null;
+  filtrados.forEach(p => {
+    const st = calcStatus(p);
+    const dias = diasRestantes(p);
+
+    if (filtroAtivo === 'todos' && st !== ultimoSt) {
+      ultimoSt = st;
+      const titulos = { vencido:'🔴 Vencidos', avencer:'🟡 A Vencer (7 dias)', pago:'🟢 Em Dia', vitalicio:'🔵 Vitalícios' };
+      const div = document.createElement('div');
+      div.className = 'section-title';
+      div.textContent = titulos[st];
+      lista.appendChild(div);
+    }
+
+    let meta = '';
+    if (st==='vencido') meta = `Venceu há ${Math.abs(dias)} dia(s) · ${p.modulo}`;
+    else if (st==='avencer') meta = `Vence em ${dias} dia(s) · ${p.modulo}`;
+    else if (st==='pago') meta = `Vence em ${fmtData(p.vencimento)} · ${p.modulo}`;
+    else meta = `Vitalício · ${p.modulo}`;
+
+    const card = document.createElement('div');
+    card.className = `card ${st}`;
+    card.innerHTML = `
+      <div class="card-icon">${icones[p.modulo]||'🎮'}</div>
+      <div class="card-info">
+        <div class="card-psn">${p.psn}</div>
+        <div class="card-meta">${meta}</div>
+      </div>
+      <div class="badge ${st}">${badgeLabel[st]}</div>
+    `;
+    card.onclick = () => abrirDetalhe(p);
+    lista.appendChild(card);
+  });
+}
+
+// ============================================================
+// NAVEGAÇÃO
+// ============================================================
+function mudarAba(aba, btn) {
+  abaAtiva = aba;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function mudarFiltro(filtro, btn) {
+  filtroAtivo = filtro;
+  document.querySelectorAll('.filtro').forEach(f => f.classList.remove('ativo'));
+  btn.classList.add('ativo');
+  render();
+}
+
+function buscar(val) {
+  buscaAtiva = val;
+  render();
+}
+
+// ============================================================
+// MODAL NOVO/EDITAR PLAYER
+// ============================================================
+let vitalAtivo = false;
+
+function abrirModalNovo() {
+  document.getElementById('modal-titulo').textContent = 'NOVO PLAYER';
+  document.getElementById('p-id').value = '';
+  document.getElementById('p-psn').value = '';
+  document.getElementById('p-modulo').value = 'Plano VIP';
+  document.getElementById('p-vcto').value = '';
+  document.getElementById('p-discord').value = '';
+  document.getElementById('p-discord-user').value = '';
+  document.getElementById('btn-excluir').style.display = 'none';
+  vitalAtivo = false;
+  atualizarToggle();
+  abrirModal('modal-player');
+}
+
+function abrirEdicao() {
+  fecharModal('modal-detalhe');
+  const p = playerAtual;
+  document.getElementById('modal-titulo').textContent = 'EDITAR PLAYER';
+  document.getElementById('p-id').value = p.id;
+  document.getElementById('p-psn').value = p.psn;
+  document.getElementById('p-modulo').value = p.modulo;
+  document.getElementById('p-vcto').value = p.vencimento || '';
+  document.getElementById('p-discord').value = p.discord_id || '';
+  document.getElementById('p-discord-user').value = p.discord_username || '';
+  document.getElementById('btn-excluir').style.display = 'block';
+  vitalAtivo = p.vitalicio || false;
+  atualizarToggle();
+  abrirModal('modal-player');
+}
+
+function toggleVital() {
+  vitalAtivo = !vitalAtivo;
+  atualizarToggle();
+}
+
+function atualizarToggle() {
+  const t = document.getElementById('toggle-vital');
+  const c = document.getElementById('campo-vcto');
+  t.className = 'toggle' + (vitalAtivo ? ' on' : '');
+  c.style.display = vitalAtivo ? 'none' : 'block';
+}
+
+async function salvarPlayer() {
+  const id = document.getElementById('p-id').value;
+  const psn = document.getElementById('p-psn').value.trim();
+  const modulo = document.getElementById('p-modulo').value;
+  const vcto = document.getElementById('p-vcto').value;
+  const discord_id = document.getElementById('p-discord').value.trim();
+  const discord_username = document.getElementById('p-discord-user').value.trim();
+
+  if (!psn) { toast('Digite o PSN do player','err'); return; }
+  if (!vitalAtivo && !vcto) { toast('Informe a data de vencimento','err'); return; }
+
+  const body = { psn, modulo, vitalicio: vitalAtivo, vencimento: vitalAtivo ? null : vcto, discord_id: discord_id||null, discord_username: discord_username||null, updated_at: new Date().toISOString() };
+
+  try {
+    if (id) {
+      await sbFetch(`/rest/v1/players?id=eq.${id}`, { method:'PATCH', body: JSON.stringify(body) });
+      toast('Player atualizado ✓','ok');
+    } else {
+      await sbFetch('/rest/v1/players', { method:'POST', body: JSON.stringify(body) });
+      toast('Player adicionado ✓','ok');
+    }
+    fecharModal('modal-player');
+    await carregarPlayers();
+  } catch(e) {
+    toast('Erro ao salvar','err');
+    console.error(e);
+  }
+}
+
+async function excluirPlayer() {
+  if (!confirm('Excluir este player? O histórico será mantido.')) return;
+  const id = document.getElementById('p-id').value;
+  try {
+    await sbFetch(`/rest/v1/players?id=eq.${id}`, { method:'PATCH', body: JSON.stringify({ ativo: false }) });
+    toast('Player removido','ok');
+    fecharModal('modal-player');
+    await carregarPlayers();
+  } catch(e) {
+    toast('Erro ao excluir','err');
+  }
+}
+
+// ============================================================
+// MODAL DETALHE + PAGAMENTO
+// ============================================================
+async function abrirDetalhe(p) {
+  playerAtual = p;
+  const st = calcStatus(p);
+  const dias = diasRestantes(p);
+  document.getElementById('d-psn').textContent = p.psn;
+
+  let info = `<strong>Módulo:</strong> ${p.modulo}<br>`;
+  if (p.vitalicio) {
+    info += `<strong>Plano:</strong> Vitalício<br>`;
+  } else {
+    info += `<strong>Vencimento:</strong> ${fmtData(p.vencimento)}<br>`;
+    if (st==='vencido') info += `<strong style="color:var(--red)">Vencido há ${Math.abs(dias)} dia(s)</strong><br>`;
+    else if (st==='avencer') info += `<strong style="color:var(--yellow)">Vence em ${dias} dia(s)</strong><br>`;
+  }
+  if (p.discord_username) info += `<strong>Discord:</strong> ${p.discord_username}<br>`;
+  document.getElementById('d-info').innerHTML = info;
+
+  // Pré-preenche nova data de vencimento com +30 dias
+  const novaData = new Date();
+  novaData.setDate(novaData.getDate() + 30);
+  document.getElementById('pg-nova-vcto').value = novaData.toISOString().split('T')[0];
+  document.getElementById('pg-valor').value = '';
+  document.getElementById('pg-obs').value = '';
+
+  document.getElementById('d-historico').innerHTML = '<div style="color:var(--text2);font-size:12px;">Carregando...</div>';
+  abrirModal('modal-detalhe');
+  await carregarHistorico(p.id);
+}
+
+async function carregarHistorico(playerId) {
+  try {
+    const hist = await sbFetch(`/rest/v1/pagamentos?player_id=eq.${playerId}&order=created_at.desc&limit=10`);
+    const el = document.getElementById('d-historico');
+    if (hist.length === 0) {
+      el.innerHTML = '<div style="color:var(--text2);font-size:12px;">Nenhum pagamento registrado</div>';
+      return;
+    }
+    el.innerHTML = hist.map(h => `
+      <div class="hist-item">
+        <div>
+          <div class="hist-meta">${fmtData(h.data_pagamento)} · ${h.modulo||''}</div>
+          ${h.observacao ? `<div class="hist-obs">${h.observacao}</div>` : ''}
+        </div>
+        <div class="hist-valor">R$ ${parseFloat(h.valor||0).toFixed(2)}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('d-historico').innerHTML = '<div style="color:var(--red);font-size:12px;">Erro ao carregar histórico</div>';
+  }
+}
+
+async function registrarPagamento() {
+  const valor = document.getElementById('pg-valor').value;
+  const novaVcto = document.getElementById('pg-nova-vcto').value;
+  const obs = document.getElementById('pg-obs').value.trim();
+  const p = playerAtual;
+
+  if (!valor) { toast('Informe o valor','err'); return; }
+  if (!novaVcto) { toast('Informe a nova data de vencimento','err'); return; }
+
+  try {
+    // Registra pagamento
+    await sbFetch('/rest/v1/pagamentos', {
+      method:'POST',
+      body: JSON.stringify({ player_id: p.id, valor: parseFloat(valor), data_pagamento: new Date().toISOString().split('T')[0], observacao: obs, modulo: p.modulo })
+    });
+
+    // Atualiza vencimento
+    await sbFetch(`/rest/v1/players?id=eq.${p.id}`, {
+      method:'PATCH',
+      body: JSON.stringify({ vencimento: novaVcto, updated_at: new Date().toISOString() })
+    });
+
+    toast('Pagamento registrado ✓','ok');
+    fecharModal('modal-detalhe');
+    await carregarPlayers();
+  } catch(e) {
+    toast('Erro ao registrar','err');
+    console.error(e);
+  }
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
+});
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, tipo='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${tipo} show`;
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ============================================================
+// HEADER DATA
+// ============================================================
+function atualizarData() {
+  const d = new Date();
+  document.getElementById('hdata').textContent = d.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  atualizarData();
+  await carregarPlayers();
+}
+
+// Auto-login se já estiver logado
+if (sessionStorage.getItem('logado')) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  init();
+}
+</script>
+</body>
+</html>
