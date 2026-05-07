@@ -339,7 +339,7 @@ header {
     </div>
     <div class="fg">
       <label>Módulo</label>
-      <select id="p-modulo">
+      <select id="p-modulo" onchange="toggleVeiculo()">
         <option>Plano VIP</option>
         <option>Armário de Armas</option>
         <option>Bases e Mods</option>
@@ -355,6 +355,19 @@ header {
     <div id="campo-vcto" class="fg">
       <label>Data de Vencimento</label>
       <input type="date" id="p-vcto">
+    </div>
+
+    <div id="campo-veiculo" class="fg" style="display:none">
+      <label>Veículo</label>
+      <select id="p-veiculo">
+        <option value="">Selecione o veículo</option>
+        <option>Olga</option>
+        <option>Gunter</option>
+        <option>Caminhão</option>
+        <option>Ada</option>
+        <option>Sarka</option>
+        <option>Humvee</option>
+      </select>
     </div>
 
     <div class="fg">
@@ -381,6 +394,8 @@ header {
     </div>
 
     <div id="d-info" style="margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.8;"></div>
+
+    <div id="secao-renovacoes"></div>
 
     <div class="divider"></div>
     <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">REGISTRAR PAGAMENTO</div>
@@ -419,7 +434,7 @@ header {
 // ============================================================
 const SUPABASE_URL = 'https://zzaghsrauwhmjaesodlf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_SloM1j_AUDkeUtLJttetKw_BTdid107';
-const DISCORD_TOKEN = 'MTUwMTk0MTg5MTU2OTAyOTI5MA.G6W80j.X2x-Yoy1KB-C2nMzdR-cw7VMGJ16jxZ3wKpFRA';
+const DISCORD_TOKEN = 'MTUwMTk0MTg5MTU2OTAyOTI5MA.G4ab_A.B7RfP0P9t4RjJ1H88pLVqCt3L93aSh497L7iio';
 
 // Login simples (email/senha hardcoded — troque aqui)
 const ADMIN_EMAIL = 'admin@dayz.com';
@@ -579,10 +594,12 @@ function render() {
     }
 
     let meta = '';
-    if (st==='vencido') meta = `Venceu há ${Math.abs(dias)} dia(s) · ${p.modulo}`;
-    else if (st==='avencer') meta = `Vence em ${dias} dia(s) · ${p.modulo}`;
-    else if (st==='pago') meta = `Vence em ${fmtData(p.vencimento)} · ${p.modulo}`;
-    else meta = `Vitalício · ${p.modulo}`;
+    const veiculoInfo = p.veiculo ? ` · ${p.veiculo}` : '';
+    const renovInfo = p.modulo === 'Seguro de Veículos' ? ` · ${p.renovacoes_usadas||0}/3 renovações` : '';
+    if (st==='vencido') meta = `Venceu há ${Math.abs(dias)} dia(s) · ${p.modulo}${veiculoInfo}${renovInfo}`;
+    else if (st==='avencer') meta = `Vence em ${dias} dia(s) · ${p.modulo}${veiculoInfo}${renovInfo}`;
+    else if (st==='pago') meta = `Vence em ${fmtData(p.vencimento)} · ${p.modulo}${veiculoInfo}${renovInfo}`;
+    else meta = `Vitalício · ${p.modulo}${veiculoInfo}${renovInfo}`;
 
     const card = document.createElement('div');
     card.className = `card ${st}`;
@@ -634,7 +651,9 @@ function abrirModalNovo() {
   document.getElementById('p-vcto').value = '';
   document.getElementById('p-discord').value = '';
   document.getElementById('p-discord-user').value = '';
+  document.getElementById('p-veiculo').value = '';
   document.getElementById('btn-excluir').style.display = 'none';
+  document.getElementById('campo-veiculo').style.display = 'none';
   vitalAtivo = false;
   atualizarToggle();
   abrirModal('modal-player');
@@ -650,7 +669,9 @@ function abrirEdicao() {
   document.getElementById('p-vcto').value = p.vencimento || '';
   document.getElementById('p-discord').value = p.discord_id || '';
   document.getElementById('p-discord-user').value = p.discord_username || '';
+  document.getElementById('p-veiculo').value = p.veiculo || '';
   document.getElementById('btn-excluir').style.display = 'block';
+  document.getElementById('campo-veiculo').style.display = p.modulo === 'Seguro de Veículos' ? 'block' : 'none';
   vitalAtivo = p.vitalicio || false;
   atualizarToggle();
   abrirModal('modal-player');
@@ -668,6 +689,12 @@ function atualizarToggle() {
   c.style.display = vitalAtivo ? 'none' : 'block';
 }
 
+function toggleVeiculo() {
+  const modulo = document.getElementById('p-modulo').value;
+  const campoV = document.getElementById('campo-veiculo');
+  campoV.style.display = modulo === 'Seguro de Veículos' ? 'block' : 'none';
+}
+
 async function salvarPlayer() {
   const id = document.getElementById('p-id').value;
   const psn = document.getElementById('p-psn').value.trim();
@@ -679,7 +706,8 @@ async function salvarPlayer() {
   if (!psn) { toast('Digite o PSN do player','err'); return; }
   if (!vitalAtivo && !vcto) { toast('Informe a data de vencimento','err'); return; }
 
-  const body = { psn, modulo, vitalicio: vitalAtivo, vencimento: vitalAtivo ? null : vcto, discord_id: discord_id||null, discord_username: discord_username||null, updated_at: new Date().toISOString() };
+  const veiculo = document.getElementById('p-veiculo').value;
+  const body = { psn, modulo, vitalicio: vitalAtivo, vencimento: vitalAtivo ? null : vcto, discord_id: discord_id||null, discord_username: discord_username||null, veiculo: veiculo||null, renovacoes_usadas: 0, updated_at: new Date().toISOString() };
 
   try {
     if (id) {
@@ -727,8 +755,35 @@ async function abrirDetalhe(p) {
     if (st==='vencido') info += `<strong style="color:var(--red)">Vencido há ${Math.abs(dias)} dia(s)</strong><br>`;
     else if (st==='avencer') info += `<strong style="color:var(--yellow)">Vence em ${dias} dia(s)</strong><br>`;
   }
+  if (p.veiculo) info += `<strong>Veículo:</strong> ${p.veiculo}<br>`;
   if (p.discord_username) info += `<strong>Discord:</strong> ${p.discord_username}<br>`;
   document.getElementById('d-info').innerHTML = info;
+
+  // Renovações (só para Seguro de Veículos)
+  const secaoRenov = document.getElementById('secao-renovacoes');
+  if (p.modulo === 'Seguro de Veículos') {
+    const usadas = p.renovacoes_usadas || 0;
+    const restantes = Math.max(0, 3 - usadas);
+    const pct = (usadas / 3) * 100;
+    const corBarra = usadas >= 3 ? 'var(--red)' : usadas >= 2 ? 'var(--yellow)' : 'var(--green)';
+    secaoRenov.style.display = 'block';
+    secaoRenov.innerHTML = `
+      <div class="divider"></div>
+      <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">RENOVAÇÕES DO MÊS</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:13px;color:var(--text);">Usadas: <strong style="color:${corBarra}">${usadas} de 3</strong></span>
+        <span style="font-size:13px;color:var(--text);">Restantes: <strong style="color:var(--green)">${restantes}</strong></span>
+      </div>
+      <div style="background:var(--bg4);border-radius:999px;height:8px;margin-bottom:14px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${corBarra};border-radius:999px;transition:width 0.3s;"></div>
+      </div>
+      ${usadas < 3 ? `<button class="btn-primary" style="margin-bottom:8px;" onclick="usarRenovacao()">🔧 REGISTRAR USO DE RENOVAÇÃO</button>` : `<div style="background:var(--red-bg);border:1px solid rgba(255,61,87,0.3);border-radius:8px;padding:10px;text-align:center;color:var(--red);font-size:13px;margin-bottom:8px;">⚠️ Renovações esgotadas este mês</div>`}
+      <button class="btn-secondary" onclick="resetarRenovacoes()">↺ Resetar renovações (novo mês)</button>
+    `;
+  } else {
+    secaoRenov.style.display = 'none';
+    secaoRenov.innerHTML = '';
+  }
 
   // Pré-preenche nova data de vencimento com +30 dias
   const novaData = new Date();
@@ -804,6 +859,74 @@ function fecharModal(id) { document.getElementById(id).classList.remove('open');
 document.querySelectorAll('.overlay').forEach(o => {
   o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
 });
+
+// ============================================================
+// RENOVAÇÕES VEÍCULO
+// ============================================================
+async function usarRenovacao() {
+  const p = playerAtual;
+  const usadas = (p.renovacoes_usadas || 0) + 1;
+  if (usadas > 3) { toast('Limite de renovações atingido','err'); return; }
+
+  try {
+    await sbFetch(`/rest/v1/players?id=eq.${p.id}`, {
+      method:'PATCH',
+      body: JSON.stringify({ renovacoes_usadas: usadas, updated_at: new Date().toISOString() })
+    });
+
+    // Registra no histórico de pagamentos como log
+    await sbFetch('/rest/v1/pagamentos', {
+      method:'POST',
+      body: JSON.stringify({
+        player_id: p.id,
+        valor: 0,
+        data_pagamento: new Date().toISOString().split('T')[0],
+        observacao: `Renovação de veículo usada (${usadas}/3) — ${p.veiculo || 'veículo'}`,
+        modulo: p.modulo
+      })
+    });
+
+    toast(`Renovação ${usadas}/3 registrada ✓`, 'ok');
+    playerAtual.renovacoes_usadas = usadas;
+    await carregarPlayers();
+    // Reopen detalhe com dados atualizados
+    const atualizado = players.find(x => x.id === p.id);
+    if (atualizado) abrirDetalhe(atualizado);
+  } catch(e) {
+    toast('Erro ao registrar renovação','err');
+    console.error(e);
+  }
+}
+
+async function resetarRenovacoes() {
+  if (!confirm('Resetar renovações para 0? Faça isso no início de cada mês.')) return;
+  const p = playerAtual;
+  try {
+    await sbFetch(`/rest/v1/players?id=eq.${p.id}`, {
+      method:'PATCH',
+      body: JSON.stringify({ renovacoes_usadas: 0, updated_at: new Date().toISOString() })
+    });
+
+    await sbFetch('/rest/v1/pagamentos', {
+      method:'POST',
+      body: JSON.stringify({
+        player_id: p.id,
+        valor: 0,
+        data_pagamento: new Date().toISOString().split('T')[0],
+        observacao: 'Renovações resetadas — novo mês',
+        modulo: p.modulo
+      })
+    });
+
+    toast('Renovações resetadas ✓','ok');
+    playerAtual.renovacoes_usadas = 0;
+    await carregarPlayers();
+    const atualizado = players.find(x => x.id === p.id);
+    if (atualizado) abrirDetalhe(atualizado);
+  } catch(e) {
+    toast('Erro ao resetar','err');
+  }
+}
 
 // ============================================================
 // TOAST
