@@ -379,8 +379,12 @@ header {
     </div>
 
     <div class="fg">
-      <label>WhatsApp (com DDI e DDD)</label>
-      <input type="tel" id="p-whatsapp" placeholder="Ex: 5511999999999">
+      <label>Discord ID (opcional)</label>
+      <input type="text" id="p-discord" placeholder="Ex: 123456789012345678">
+    </div>
+    <div class="fg">
+      <label>Username Discord (opcional)</label>
+      <input type="text" id="p-discord-user" placeholder="Ex: nomedoplayer">
     </div>
 
     <button class="btn-primary" onclick="salvarPlayer()">SALVAR</button>
@@ -424,14 +428,6 @@ header {
     <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">HISTÓRICO</div>
     <div id="d-historico"><div style="color:var(--text2);font-size:12px;">Carregando...</div></div>
 
-    <div class="divider"></div>
-    <div id="secao-whatsapp">
-      <div style="font-size:10px;font-weight:600;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">ENVIAR COBRANÇA</div>
-      <div id="wp-info" style="margin-bottom:10px;font-size:12px;color:var(--text2);"></div>
-      <button onclick="enviarWhatsApp()" style="width:100%;padding:11px;background:#25D366;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:'Exo 2',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
-        📲 Enviar cobrança no WhatsApp
-      </button>
-    </div>
     <div class="divider"></div>
     <button class="btn-secondary" onclick="abrirEdicao()">✏️ Editar dados do player</button>
   </div>
@@ -662,7 +658,8 @@ function abrirModalNovo() {
   document.getElementById('p-psn').value = '';
   document.getElementById('p-modulo').value = 'Plano VIP';
   document.getElementById('p-vcto').value = '';
-  document.getElementById('p-whatsapp').value = '';
+  document.getElementById('p-discord').value = '';
+  document.getElementById('p-discord-user').value = '';
   document.getElementById('p-veiculo').value = '';
   document.getElementById('p-com-seguro').value = 'sim';
   document.getElementById('btn-excluir').style.display = 'none';
@@ -681,7 +678,8 @@ function abrirEdicao() {
   document.getElementById('p-psn').value = p.psn;
   document.getElementById('p-modulo').value = p.modulo;
   document.getElementById('p-vcto').value = p.vencimento || '';
-  document.getElementById('p-whatsapp').value = p.whatsapp || '';
+  document.getElementById('p-discord').value = p.discord_id || '';
+  document.getElementById('p-discord-user').value = p.discord_username || '';
   document.getElementById('p-veiculo').value = p.veiculo || '';
   document.getElementById('p-com-seguro').value = p.com_seguro ? 'sim' : 'nao';
   document.getElementById('btn-excluir').style.display = 'block';
@@ -724,9 +722,8 @@ async function salvarPlayer() {
   if (!vitalAtivo && !vcto) { toast('Informe a data de vencimento','err'); return; }
 
   const veiculo = document.getElementById('p-veiculo').value;
-  const comSeguroEl = document.getElementById('p-com-seguro');
-  const comSeguro = comSeguroEl ? comSeguroEl.value === 'sim' : false;
-  const body = { psn, modulo, vitalicio: vitalAtivo, vencimento: vitalAtivo ? null : vcto, whatsapp: whatsapp||null, veiculo: veiculo||null, com_seguro: comSeguro, renovacoes_usadas: 0, updated_at: new Date().toISOString() };
+  const comSeguro = document.getElementById('p-com-seguro').value === 'sim';
+  const body = { psn, modulo, vitalicio: vitalAtivo, vencimento: vitalAtivo ? null : vcto, discord_id: discord_id||null, discord_username: discord_username||null, veiculo: veiculo||null, com_seguro: comSeguro, renovacoes_usadas: 0, updated_at: new Date().toISOString() };
 
   try {
     if (id) {
@@ -776,16 +773,8 @@ async function abrirDetalhe(p) {
   }
   if (p.veiculo) info += `<strong>Veículo:</strong> ${p.veiculo}<br>`;
   if (p.modulo === 'Seguro de Veículos') info += `<strong>Seguro:</strong> ${p.com_seguro ? '✅ Com Seguro' : '❌ Sem Seguro'}<br>`;
-  if (p.whatsapp) info += `<strong>WhatsApp:</strong> +${p.whatsapp}<br>`;
+  if (p.discord_username) info += `<strong>Discord:</strong> ${p.discord_username}<br>`;
   document.getElementById('d-info').innerHTML = info;
-
-  // Atualiza info do WhatsApp
-  const wpInfo = document.getElementById('wp-info');
-  if (p.whatsapp) {
-    wpInfo.innerHTML = `📱 Número salvo: <strong>+${p.whatsapp}</strong>`;
-  } else {
-    wpInfo.innerHTML = `⚠️ Nenhum número cadastrado. <span style="color:var(--accent);cursor:pointer;" onclick="abrirEdicao()">Editar player</span> para adicionar.`;
-  }
 
   // Renovações (só para Seguro de Veículos)
   const secaoRenov = document.getElementById('secao-renovacoes');
@@ -954,57 +943,6 @@ async function resetarRenovacoes() {
   } catch(e) {
     toast('Erro ao resetar','err');
   }
-}
-
-// ============================================================
-// WHATSAPP
-// ============================================================
-function enviarWhatsApp() {
-  const p = playerAtual;
-  const numero = (p.whatsapp || document.getElementById('wp-numero').value.trim()).replace(/\D/g, '');
-
-  if (!numero || numero.length < 10) {
-    toast('Número de WhatsApp não cadastrado. Edite o player e adicione o número.', 'err');
-    return;
-  }
-
-  const st = calcStatus(p);
-  const dias = diasRestantes(p);
-  const LIVEPIX = 'https://livepix.gg/twddayz';
-
-  let msg = '';
-
-  if (st === 'vencido') {
-    msg = `Olá *${p.psn}*! 👋
-
-Seu *${p.modulo}* no servidor *[BR] TWD - DAYZ - PVE* venceu há *${Math.abs(dias)} dia(s)*.
-
-💳 Renove agora para não perder o acesso:
-${LIVEPIX}
-
-Após o pagamento envie o comprovante aqui. ✅`;
-  } else if (st === 'avencer') {
-    msg = `Olá *${p.psn}*! 👋
-
-Seu *${p.modulo}* no servidor *[BR] TWD - DAYZ - PVE* vence em *${dias} dia(s)*.
-
-💳 Renove com antecedência:
-${LIVEPIX}
-
-Após o pagamento envie o comprovante aqui. ✅`;
-  } else {
-    msg = `Olá *${p.psn}*! 👋
-
-Passando para lembrar que seu *${p.modulo}* no servidor *[BR] TWD - DAYZ - PVE* vence em *${fmtData(p.vencimento)}*.
-
-💳 Renove quando quiser:
-${LIVEPIX}
-
-Após o pagamento envie o comprovante aqui. ✅`;
-  }
-
-  const url = `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
 }
 
 // ============================================================
