@@ -724,8 +724,9 @@ async function salvarPlayer() {
   if (!vitalAtivo && !vcto) { toast('Informe a data de vencimento','err'); return; }
 
   const veiculo = document.getElementById('p-veiculo').value;
-  const comSeguro = document.getElementById('p-com-seguro').value === 'sim';
-  const body = { psn, modulo, vitalicio: vitalAtivo, vencimento: vitalAtivo ? null : vcto, discord_id: discord_id||null, discord_username: discord_username||null, veiculo: veiculo||null, com_seguro: comSeguro, renovacoes_usadas: 0, updated_at: new Date().toISOString() };
+  const comSeguroEl = document.getElementById('p-com-seguro');
+  const comSeguro = comSeguroEl ? comSeguroEl.value === 'sim' : false;
+  const body = { psn, modulo, vitalicio: vitalAtivo, vencimento: vitalAtivo ? null : vcto, whatsapp: whatsapp||null, veiculo: veiculo||null, com_seguro: comSeguro, renovacoes_usadas: 0, updated_at: new Date().toISOString() };
 
   try {
     if (id) {
