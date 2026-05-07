@@ -370,6 +370,14 @@ header {
       </select>
     </div>
 
+    <div id="campo-seguro" class="fg" style="display:none">
+      <label>Status do Seguro</label>
+      <select id="p-com-seguro">
+        <option value="sim">Com Seguro</option>
+        <option value="nao">Sem Seguro</option>
+      </select>
+    </div>
+
     <div class="fg">
       <label>Discord ID (opcional)</label>
       <input type="text" id="p-discord" placeholder="Ex: 123456789012345678">
@@ -595,11 +603,12 @@ function render() {
 
     let meta = '';
     const veiculoInfo = p.veiculo ? ` · ${p.veiculo}` : '';
+    const seguroInfo = p.modulo === 'Seguro de Veículos' ? (p.com_seguro ? ' · ✅ Com Seguro' : ' · ❌ Sem Seguro') : '';
     const renovInfo = p.modulo === 'Seguro de Veículos' ? ` · ${p.renovacoes_usadas||0}/3 renovações` : '';
-    if (st==='vencido') meta = `Venceu há ${Math.abs(dias)} dia(s) · ${p.modulo}${veiculoInfo}${renovInfo}`;
-    else if (st==='avencer') meta = `Vence em ${dias} dia(s) · ${p.modulo}${veiculoInfo}${renovInfo}`;
-    else if (st==='pago') meta = `Vence em ${fmtData(p.vencimento)} · ${p.modulo}${veiculoInfo}${renovInfo}`;
-    else meta = `Vitalício · ${p.modulo}${veiculoInfo}${renovInfo}`;
+    if (st==='vencido') meta = `Venceu há ${Math.abs(dias)} dia(s) · ${p.modulo}${veiculoInfo}${seguroInfo}${renovInfo}`;
+    else if (st==='avencer') meta = `Vence em ${dias} dia(s) · ${p.modulo}${veiculoInfo}${seguroInfo}${renovInfo}`;
+    else if (st==='pago') meta = `Vence em ${fmtData(p.vencimento)} · ${p.modulo}${veiculoInfo}${seguroInfo}${renovInfo}`;
+    else meta = `Vitalício · ${p.modulo}${veiculoInfo}${seguroInfo}${renovInfo}`;
 
     const card = document.createElement('div');
     card.className = `card ${st}`;
@@ -652,8 +661,10 @@ function abrirModalNovo() {
   document.getElementById('p-discord').value = '';
   document.getElementById('p-discord-user').value = '';
   document.getElementById('p-veiculo').value = '';
+  document.getElementById('p-com-seguro').value = 'sim';
   document.getElementById('btn-excluir').style.display = 'none';
   document.getElementById('campo-veiculo').style.display = 'none';
+  document.getElementById('campo-seguro').style.display = 'none';
   vitalAtivo = false;
   atualizarToggle();
   abrirModal('modal-player');
@@ -670,8 +681,11 @@ function abrirEdicao() {
   document.getElementById('p-discord').value = p.discord_id || '';
   document.getElementById('p-discord-user').value = p.discord_username || '';
   document.getElementById('p-veiculo').value = p.veiculo || '';
+  document.getElementById('p-com-seguro').value = p.com_seguro ? 'sim' : 'nao';
   document.getElementById('btn-excluir').style.display = 'block';
-  document.getElementById('campo-veiculo').style.display = p.modulo === 'Seguro de Veículos' ? 'block' : 'none';
+  const isSeguroEdit = p.modulo === 'Seguro de Veículos';
+  document.getElementById('campo-veiculo').style.display = isSeguroEdit ? 'block' : 'none';
+  document.getElementById('campo-seguro').style.display = isSeguroEdit ? 'block' : 'none';
   vitalAtivo = p.vitalicio || false;
   atualizarToggle();
   abrirModal('modal-player');
@@ -691,8 +705,9 @@ function atualizarToggle() {
 
 function toggleVeiculo() {
   const modulo = document.getElementById('p-modulo').value;
-  const campoV = document.getElementById('campo-veiculo');
-  campoV.style.display = modulo === 'Seguro de Veículos' ? 'block' : 'none';
+  const isSeguro = modulo === 'Seguro de Veículos';
+  document.getElementById('campo-veiculo').style.display = isSeguro ? 'block' : 'none';
+  document.getElementById('campo-seguro').style.display = isSeguro ? 'block' : 'none';
 }
 
 async function salvarPlayer() {
@@ -707,7 +722,8 @@ async function salvarPlayer() {
   if (!vitalAtivo && !vcto) { toast('Informe a data de vencimento','err'); return; }
 
   const veiculo = document.getElementById('p-veiculo').value;
-  const body = { psn, modulo, vitalicio: vitalAtivo, vencimento: vitalAtivo ? null : vcto, discord_id: discord_id||null, discord_username: discord_username||null, veiculo: veiculo||null, renovacoes_usadas: 0, updated_at: new Date().toISOString() };
+  const comSeguro = document.getElementById('p-com-seguro').value === 'sim';
+  const body = { psn, modulo, vitalicio: vitalAtivo, vencimento: vitalAtivo ? null : vcto, discord_id: discord_id||null, discord_username: discord_username||null, veiculo: veiculo||null, com_seguro: comSeguro, renovacoes_usadas: 0, updated_at: new Date().toISOString() };
 
   try {
     if (id) {
@@ -756,6 +772,7 @@ async function abrirDetalhe(p) {
     else if (st==='avencer') info += `<strong style="color:var(--yellow)">Vence em ${dias} dia(s)</strong><br>`;
   }
   if (p.veiculo) info += `<strong>Veículo:</strong> ${p.veiculo}<br>`;
+  if (p.modulo === 'Seguro de Veículos') info += `<strong>Seguro:</strong> ${p.com_seguro ? '✅ Com Seguro' : '❌ Sem Seguro'}<br>`;
   if (p.discord_username) info += `<strong>Discord:</strong> ${p.discord_username}<br>`;
   document.getElementById('d-info').innerHTML = info;
 
